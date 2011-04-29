@@ -28,8 +28,15 @@
         _ (println vs)]
     `(vec (mapcat #(list %1 %2) '~ks ~vs))))
 
+(defmacro pre-let-m [bindings]
+  (let [ks (vec (mapcat identity (partition 1 2 bindings)))
+        vs (eval `(let ~bindings  ~ks))
+        _ (println ks)
+        _ (println vs)]
+    `(vec (mapcat #(list %1 %2) '~ks ~vs))))
+
 (defn pre-let [bindings & body]
-  (let [new-ctx (eval `(let [ctx# (pre-eval-let- ~bindings)] ctx#))]
+  (let [new-ctx (eval `(let [ctx# (pre-let- ~bindings)] ctx#))]
     `(let ~new-ctx ~@body)))
 
 (defmulti handle-msg :type)
@@ -75,14 +82,23 @@
   (do
     (.start (Thread. #(loop-receive fn-receive) ))))
 
+(defn change-bindings [bindings]
+  `(vec ~bindings))
+
+(defn change-quote [& body]
+  `(list ~@body))
+
 (defn with-async
   "execute asynchronize call"
   [bindings & body]
   (prn (type body) " " body)
   (send-msg {:type :async :code bindings :after body}))
 
+(defmacro async [bindings & body]
+  (send-msg {:type :async :code (change-bindings bindings) :after (change-quote body)}))
 
-
+(defmacro contextual-eval [ctx expr] 
+  {:type :async :code (pre-let- ctx) })
 
 
 
