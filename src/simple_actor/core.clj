@@ -21,16 +21,16 @@
   `(let ~bindings 3))
 
 
-(defn pre-let- [bindings]
+(defmacro pre-let-m [bindings]
   (let [ks (vec (mapcat identity (partition 1 2 bindings)))
         vs (eval `(let ~bindings  ~ks))
         _ (println ks)
         _ (println vs)]
     `(vec (mapcat #(list %1 %2) '~ks ~vs))))
 
-(defmacro pre-let-m [bindings]
+(defmacro pre-let- [bindings]
   (let [ks (vec (mapcat identity (partition 1 2 bindings)))
-        vs (eval `(let ~bindings  ~ks))
+        vs (eval `(let ~(vec bindings)  ~ks))
         _ (println ks)
         _ (println vs)]
     `(vec (mapcat #(list %1 %2) '~ks ~vs))))
@@ -97,8 +97,7 @@
 (defmacro async [bindings & body]
   (send-msg {:type :async :code (change-bindings bindings) :after (change-quote body)}))
 
-(defmacro contextual-eval [ctx expr] 
-  {:type :async :code (pre-let- ctx) })
+
 
 
 
