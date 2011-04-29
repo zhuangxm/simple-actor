@@ -1,9 +1,13 @@
 (ns simple-actor.core
-  (:import [java.util.concurrent LinkedBlockingQueue]))
+  (:import [java.util.concurrent LinkedBlockingQueue
+            ThreadPoolExecutor TimeUnit ]))
 
 (def msg-example {:type :execute :result {'a 1 'b 2} :program (list 'a 'b) })
 
 (def *queue* (LinkedBlockingQueue.))
+
+(def *executor* (ThreadPoolExecutor. 3 3 0 TimeUnit/MINUTES
+                                    (LinkedBlockingQueue. 1024)))
 
 (defn receive-msg []
   (.take *queue*))
@@ -13,21 +17,42 @@
   (.put *queue* msg))
 
 
-(defmacro pre-eval-ctx- [ctx]
-  (let [ks (vec (mapcat identity (partition 1 2 ctx)))
-        vs (eval `(let ~(vec ctx)  ~ks))
+(defmacro test-let [bindings]
+  `(let ~bindings 3))
+
+
+(defn pre-let- [bindings]
+  (let [ks (vec (mapcat identity (partition 1 2 bindings)))
+        vs (eval `(let ~bindings  ~ks))
         _ (println ks)
         _ (println vs)]
     `(vec (mapcat #(list %1 %2) '~ks ~vs))))
 
-(defmacro pre-eval-ctx [ctx & body]
-  (let [new-ctx (eval `(let [ctx# (pre-eval-ctx- ~ctx)] ctx#))]
+(defn pre-let [bindings & body]
+  (let [new-ctx (eval `(let [ctx# (pre-eval-let- ~bindings)] ctx#))]
     `(let ~new-ctx ~@body)))
 
+(defmulti handle-msg :type)
 
-;TODO complete this function to ##########################################
-(defmacro contextual-eval [ctx expr]
-  (println ctx))
+(defmethod handle-msg nil
+  [msg]
+  (prn msg "not match method."))
+
+(defn async-execute
+  [msg]
+  (prn "async-execute : " (Thread/currentThread))
+  (let [code (apply pre-let (:code msg) (:after msg))]
+    {:type :sync :code code}))
+
+
+(defmethod handle-msg :async
+  [msg]
+  (.execute *executor* #(let [after-code (async-execute msg)]
+                          (send-msg after-code)) ))
+
+(defmethod handle-msg :sync
+  [msg]
+  (eval (:code msg)))
 
 (defn handle-msg- [msg]
   (println msg)
@@ -37,9 +62,7 @@
     (when after
       (if-let [result-params (:result msg)]
         (send-msg {:type :execute :program (list 'let (map #(vec %1 %2) result-params  results  ) after)})
-        results
-        ))) )
-
+        results))))
 
 (defn loop-receive [fn-receive]
   (println "loop-receive start ")
@@ -48,25 +71,27 @@
     (handle-msg msg)
     (recur (fn-receive))))
 
-
-
 (defn actor [fn-receive]
   (do
     (.start (Thread. #(loop-receive fn-receive) ))))
 
-
-(defmacro async-one
-  "execute an synchronize call and execute others"
-  [sym-result statement & body]
-  (if sym-result 
-    `(send-msg {:type :execute :result ~sym-result :program ~statement :after ~@body})
-    `(send-msg {:type :execute :program ~@body}) ))
-
-(defmacro with-async
+(defn with-async
   "execute asynchronize call"
-  [[var- code- & rest :as bindings] & body]
-  (println var-)
-  (let [r-bindings (drop 2 bindings)]
-    (if var- 
-      `(async-one '~var- ~code- (with-async ~r-bindings ~@body))
-      `(async-one nil nil ~@body) )))
+  [bindings & body]
+  (prn (type body) " " body)
+  (send-msg {:type :async :code bindings :after body}))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
