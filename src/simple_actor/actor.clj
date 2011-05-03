@@ -2,36 +2,52 @@
   (:import [java.util.concurrent LinkedBlockingQueue
             ThreadPoolExecutor TimeUnit]))
 
+;; the actor is a send function in real. so when we define a parameter
+;; either actor or f-send represents the same meaning.
+;; the actor need a external function f-handle to handle messages
+;; the handler function has the form f-handler [actor msg]
+;; or f-handler [f-send msg]
+;; and return a list of messages
+;; TODO add debug log code
+
+(defn loop-handle
+  "loop using f-handle handles the msg and the returned messages
+  that the f-handle fucntion returns"
+  [actor f-handle msg]
+  (let [msgs (f-handle actor msg)]
+    (if-not (empty? msgs)
+      (doseq [m msgs] (loop-handle actor f-handle m)))))
+
 (defn loop-receive
   "loop receive messages and handle it
    fn-receive [] : receive message function with zero parameter
-   fn-handle [msg] : handle message function with one parameter msg"
-  [fn-receive fn-handle]
-  (loop [msg (fn-receive)]
+   fn-handle [actor msg] : handle message function with an actor and a msg and return a list of messages"
+  [actor f-receive f-handle]
+  (loop [msg (f-receive)]
     (if-not (= (:type msg) :stop)
       (do 
         (try 
-          (fn-handle msg)
-          (catch Exception e (prn "handle-msg error " e) )  )
-        (recur (fn-receive))))))
+          (do (loop-handle actor f-handle msg))
+          (catch Exception e (prn "handle-msg error " msg e) )  )
+        (recur (f-receive))))))
 
 (defn stop-actor
   "stop a actor"
   [actor]
-  ((:send actor) {:type :stop}))
+  (actor {:type :stop}))
 
 (defn actor
   "start a actor, loop receive and handle msg
    fn-handle  [msg] : function that handle msg
-   return send and receive message function {:send fn-send :receive fn-receive}"
-  [fn-handle]
+   return the send message function f-send"
+  [f-handle]
   (let [queue (LinkedBlockingQueue.)]
     (letfn [(f-send [msg] (.put queue msg))
             (f-receive [] (.take queue))]
       
       (.start (Thread. #(do (prn "actor thread start" (Thread/currentThread))
-                            (loop-receive f-receive fn-handle)
+                            (loop-receive f-send f-receive f-handle)
                             (prn "actor thread stop" (Thread/currentThread))) ))
-      {:send f-send :receive f-receive})))
+      f-send)))
 
 
