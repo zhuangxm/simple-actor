@@ -9,7 +9,6 @@
 ;; the handler function has the form f-handler [actor msg]
 ;; or f-handler [f-send msg]
 ;; and return a list of messages
-;; TODO add debug log code
 
 (defn loop-handle
   "loop using f-handle handles the msg and the returned messages
