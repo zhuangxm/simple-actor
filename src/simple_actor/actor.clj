@@ -1,4 +1,5 @@
 (ns simple-actor.actor
+  (:require [clojure.contrib.logging :as log])
   (:import [java.util.concurrent LinkedBlockingQueue
             ThreadPoolExecutor TimeUnit]))
 
@@ -14,6 +15,7 @@
   "loop using f-handle handles the msg and the returned messages
   that the f-handle fucntion returns"
   [actor f-handle msg]
+  (log/debug (str "handle message : " msg))
   (let [msgs (f-handle actor msg)]
     (if-not (empty? msgs)
       (doseq [m msgs] (loop-handle actor f-handle m)))))
@@ -24,11 +26,12 @@
    fn-handle [actor msg] : handle message function with an actor and a msg and return a list of messages"
   [actor f-receive f-handle]
   (loop [msg (f-receive)]
+    (log/debug (str "receive message : " msg))
     (if-not (= (:type msg) :stop)
       (do 
         (try 
           (do (loop-handle actor f-handle msg))
-          (catch Exception e (prn "handle-msg error " msg e) )  )
+          (catch Exception e (log/error (str "handle-msg error : " msg) e) )  )
         (recur (f-receive))))))
 
 (defn stop-actor
@@ -45,9 +48,11 @@
     (letfn [(f-send [msg] (.put queue msg))
             (f-receive [] (.take queue))]
       
-      (.start (Thread. #(do (prn "actor thread start" (Thread/currentThread))
+      (.start (Thread. #(do (log/info (str "actor thread start"
+                                           (Thread/currentThread)))
                             (loop-receive f-send f-receive f-handle)
-                            (prn "actor thread stop" (Thread/currentThread))) ))
+                            (log/info (str "actor thread stop"
+                                           (Thread/currentThread)))) ))
       f-send)))
 
 
