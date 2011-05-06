@@ -44,7 +44,8 @@
    return the send message function f-send"
   [f-handle]
   (let [queue (LinkedBlockingQueue.)]
-    (letfn [(f-send [msg] (.put queue msg))
+    (letfn [(f-send [msg] (do (log/debug (str "send message : " msg))
+                              (.put queue msg)))
             (f-receive [] (.take queue))]
       
       (.start (Thread. #(do (log/info (str "actor thread start"
