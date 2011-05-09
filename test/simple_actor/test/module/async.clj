@@ -16,12 +16,12 @@
       (do 
         (init-module *executor-example* f-register)
         (do
-          (with-async f-send [_ (prn "hello")
-                              a 5
-                              b (+ a 2)]
-            ;;(is (not= t (Thread/currentThread))"execute in different
-            ;;thread" )
-            (clojure.test/is (= 12 (+ a b)))
-            (prn (+ a b))))
+          (f-send (with-async [_ (prn "hello")
+                                a 5
+                                b (+ a 2)
+                                t (Thread/currentThread)]
+                     (is (not= t (Thread/currentThread))"execute in different thread" )
+                     (is (= 12 (+ a b)))
+                     (prn (+ a b)))))
         (Thread/sleep 1000)
         (stop-actor f-send))))
