@@ -20,7 +20,8 @@
                                 a 5
                                 b (+ a 2)
                                 t (Thread/currentThread)]
-                     (is (not= t (Thread/currentThread))"execute in different thread" )
+                    (is (not= t (Thread/currentThread))
+                        "execute in different thread" )
                      (is (= 12 (+ a b)))
                      (prn (+ a b)))))
         (Thread/sleep 1000)
