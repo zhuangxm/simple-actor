@@ -21,43 +21,44 @@
   {:type :timer :tag cancel-tag :repeat repeat-ms :code `(fn [] ~@body)})
 
 (defn cancel-timer
-  "return a cancel timer message
+  "return a cancel timer signal
    cancel-tag is the tag of timer that want to be cancelled"
   [cancel-tag]
   {:type :timer-cancel :tag cancel-tag})
 
 (defn timer-execute-register_
   "delayed or repeated to send sync execute code to actor"
-  [futures-m #^ScheduledExecutorService scheduleExecutor actor msg]
-  (log/debug (str "ask to register timer execute : " msg))
-  (let [f-sync (fn [] (log/debug (str "timer-up send to actor to execute :" msg))
-                 (actor {:type :timer-sync :tag (:tag msg) :code (:code msg)}))
-        future_ (if-let [repeat-ms (:repeat msg)]
+  [futures-m #^ScheduledExecutorService scheduleExecutor actor signal]
+  (log/debug (str "ask to register timer execute : " signal))
+  (let [f-sync (fn [] (log/debug (str "timer-up send to actor to execute :" signal))
+                 (actor {:type :timer-sync :tag (:tag signal)
+                         :code (:code signal)}))
+        future_ (if-let [repeat-ms (:repeat signal)]
                  (.scheduleAtFixedRate scheduleExecutor
                                        #^Runnable f-sync repeat-ms repeat-ms
                                        TimeUnit/MILLISECONDS)
                  (.schedule scheduleExecutor
-                            #^Runnable f-sync (long (:delay msg))
+                            #^Runnable f-sync (long (:delay signal))
                             TimeUnit/MILLISECONDS))]
-    (swap! futures-m assoc (:tag msg) future_)
+    (swap! futures-m assoc (:tag signal) future_)
     nil))
 
 (defn timer-execute_
-  "just execute the code (:code msg) of the message"
-  [timer-futures-m actor msg]
-  (let [tag (:tag msg)]
+  "just execute the code (:code signal) of the signal"
+  [timer-futures-m actor signal]
+  (let [tag (:tag signal)]
     (if-not (get @timer-futures-m tag)
-      (do (log/debug (str "timer has been cancelled" msg))
+      (do (log/debug (str "timer has been cancelled : " signal))
           (swap! timer-futures-m dissoc tag)
           nil)
-      (do (log/debug (str "invoke timer-exectue : " msg))
-          ((:code msg))))))
+      (do (log/debug (str "invoke timer-exectue : " signal))
+          ((:code signal))))))
 
 (defn cancel-timer_
-  "cacnel a timer of specitfy tag of (:msg msg) "
-  [timer-futures-m actor msg]
-  (log/debug (str "cancel timer : " msg))
-  (let [tag (:tag msg)]
+  "cacnel a timer of specitfy tag of (:tag signal) "
+  [timer-futures-m actor signal]
+  (log/debug (str "cancel timer : " signal))
+  (let [tag (:tag signal)]
     (if-let [future_ (get @timer-futures-m tag)]
       (do (.cancel #^ScheduledFuture future_ false)
           (swap! timer-futures-m dissoc tag)))
@@ -65,7 +66,7 @@
 
 (defn cancel-all-timer_
   "cancel all unexecuted timer"
-  [timer-futures-m actor msg]
+  [timer-futures-m actor signal]
   (log/debug "cancel all timer")
   (doseq [future_ (vals @timer-futures-m)] (.cancel #^ScheduledFuture future_) )
   (reset! timer-futures-m {})

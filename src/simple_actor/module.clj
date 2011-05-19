@@ -7,20 +7,20 @@
 
 (defn mk-main-handle
   "define a handle that can invoke different handle function
-   according to registered  message header, one message header can have more than one handle function. and every handle function will be execute in the order that they registered.  
+   according to registered  signal type, one signal type can have more than one handle function. and every handle function will be execute in the order that they registered.  
    return [f-register f-main-handle]
-   f-register [header f-handle] : register the f-handle function to handle the message with the header, the f-handle must have the same form as f-main-handle
-   f-main-handler [actor msg] : main handle function that according the header of message to pass on to sub handler. Mainly used in making a actor"
+   f-register [type f-handle] : register the f-handle function to handle the signal with the type, the f-handle must have the same form as f-main-handle
+   f-main-handler [actor signal] : main handle function that according the type of a signal to pass on to sub handler function. Mainly used in making a actor"
   []
   (let [handlers (atom {})]
-    (letfn [(f-register [header f-handle]
-                        (log/info (str "register message : " header
+    (letfn [(f-register [type f-handle]
+                        (log/info (str "register signal type : " type
                                        " with handle: " f-handle) )
-                        (swap! handlers update-in [header] append-last f-handle))
-            (f-main-handle [actor msg]
-                           (log/debug (str "handle message : " msg))
-                           (if-let [f-handles (get @handlers (:type msg))]
-                             (mapcat #(% actor msg) f-handles)
-                             (log/warn (str "not registed msg : " msg))))]
+                        (swap! handlers update-in [type] append-last f-handle))
+            (f-main-handle [actor signal]
+                           (log/debug (str "handle signal : " signal))
+                           (if-let [f-handles (get @handlers (:type signal))]
+                             (mapcat #(% actor signal) f-handles)
+                             (log/warn (str "not registed signal : " signal))))]
       [f-register f-main-handle])))
 

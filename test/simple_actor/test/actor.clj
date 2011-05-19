@@ -3,45 +3,45 @@
   (:use [clojure.test]))
 
 
-(def messages_ (ref '()))
+(def signals_ (ref '()))
 
 (defmulti test-handle
-  (fn [actor msg] (:type msg)))
+  (fn [actor signal] (:type signal)))
 
 (defmethod test-handle :single
-  [actor msg]
-  (dosync (alter messages_ conj :single))
+  [actor signal]
+  (dosync (alter signals_ conj :single))
   [{:type :none}])
 
 (defmethod test-handle :double
-  [actor msg]
-  (dosync (alter messages_ conj :double))
+  [actor signal]
+  (dosync (alter signals_ conj :double))
   [{:type :single} {:type :single}])
 
 
 (defmethod test-handle :four
-  [actor msg]
-  (dosync (alter messages_ conj :four))
+  [actor signal]
+  (dosync (alter signals_ conj :four))
   (repeat 2 {:type :double }))
 
 (defmethod test-handle :none
-  [actor msg]
-  (dosync (alter messages_ conj :none))
+  [actor signal]
+  (dosync (alter signals_ conj :none))
   [])
 
 (deftest test-actor
-  "test actor handles message should use the perdefined order"
+  "test actor handles signals should use the perdefined order"
   (let [actor (actor test-handle)]
     (try
       (actor {:type :four})
       (actor {:type :none})
       (actor {:type :single})
       (Thread/sleep 1000)
-      (is (= @messages_  (reverse '(:four :double :single :none :single :none
+      (is (= @signals_  (reverse '(:four :double :single :none :single :none
                                           :double :single :none :single :none
                                           :none
                                           :single
                                           :none)) )
-          "check the order the messages that was handled") 
+          "check the order the signalss that was handled") 
       (finally (stop-actor actor)))))
 
