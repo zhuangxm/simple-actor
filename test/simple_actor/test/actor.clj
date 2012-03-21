@@ -31,7 +31,7 @@
 
 (deftest test-actor
   "test actor handles signals should use the perdefined order"
-  (let [actor (actor test-handle)]
+  (let [actor (mk-actor test-handle)]
     (try
       (actor {:type :four})
       (actor {:type :none})

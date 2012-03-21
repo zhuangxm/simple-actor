@@ -12,7 +12,7 @@
 (deftest test-async-module
     "test async module can work"
     (let [[f-register f-main-handle] (mk-main-handle)
-          f-send (actor f-main-handle)]
+          f-send (mk-actor f-main-handle)]
       (do 
         (init-module *executor-example* f-register)
         (do

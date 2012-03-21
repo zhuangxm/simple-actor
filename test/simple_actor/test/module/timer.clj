@@ -7,7 +7,7 @@
 (deftest test-timer-module
   "test timer module work correctly"
   (let [[f-register f-main-handle] (mk-main-handle)
-        f-send (actor f-main-handle)
+        f-send (mk-actor f-main-handle)
         timer1-counter (atom 0)
         timer2-counter (atom 0)]
     (do

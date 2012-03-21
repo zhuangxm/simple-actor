@@ -45,7 +45,7 @@
   [actor]
   (actor {:type :stop}))
 
-(defn actor
+(defn mk-actor
   "start a actor, loop receive and handle signal
    fn-handle  [signal] : function that handle signal
    return the function that sends signal : f-send"
