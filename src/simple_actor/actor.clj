@@ -22,7 +22,7 @@
   that the f-handle fucntion returns"
   [actor f-handle signal]
   (log/debug (str "handle signal : " signal))
-  (let [signals (f-handle actor signal)]
+  (let [signals (filter identity (f-handle actor signal))]
     (if-not (empty? signals)
       (doseq [m signals] (loop-handle actor f-handle m)))))
 
