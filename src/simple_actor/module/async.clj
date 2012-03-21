@@ -1,7 +1,7 @@
 (ns simple-actor.module.async
   (:import [java.util.concurrent LinkedBlockingQueue
             ThreadPoolExecutor TimeUnit])
-  (:require [clojure.contrib.logging :as log]))
+  (:require [clojure.tools.logging :as log]))
 
 ;;the :code will be a function that can be execute
 (def signal-async-example {:type :async :code (partial inc 1)})

@@ -1,5 +1,5 @@
 (ns simple-actor.module
-  (:require [clojure.contrib.logging :as log]))
+  (:require [clojure.tools.logging :as log]))
 
 
 (defn append-last [coll item]

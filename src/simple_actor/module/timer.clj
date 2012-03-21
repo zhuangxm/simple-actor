@@ -1,7 +1,7 @@
 (ns simple-actor.module.timer
   (:import [java.util.concurrent ScheduledExecutorService TimeUnit
             ScheduledThreadPoolExecutor ScheduledFuture])
-  (:require [clojure.contrib.logging :as log]))
+  (:require [clojure.tools.logging :as log]))
 
 
 ;;define timer module can execute delayed or repeatly.

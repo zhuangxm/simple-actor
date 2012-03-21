@@ -1,5 +1,5 @@
 (ns simple-actor.actor
-  (:require [clojure.contrib.logging :as log])
+  (:require [clojure.tools.logging :as log])
   (:import [java.util.concurrent LinkedBlockingQueue
             ThreadPoolExecutor TimeUnit]))
 
