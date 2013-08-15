@@ -20,23 +20,23 @@
 (defn loop-handle
   "loop using f-handle handles the signal and the returned signals
   that the f-handle fucntion returns"
-  [actor f-handle signal]
+  [actor f-handler signal a-state]
   (log/debug (str "handle signal : " signal))
-  (let [signals (filter identity (f-handle actor signal))]
+  (let [signals (filter identity (f-handler actor (assoc signal :state @a-state)))]
     (if-not (empty? signals)
-      (doseq [m signals] (loop-handle actor f-handle m)))))
+      (doseq [m signals] (loop-handle actor f-handler m a-state)))))
 
 (defn loop-receive
   "loop receive signals and handle it
    fn-receive [] : function that receives singal with zero parameter
    fn-handle [actor signal] : function that handle signal with an actor and a signal and return a list of signals"
-  [actor f-receive f-handle]
+  [actor f-receive f-handler a-state]
   (loop [signal (f-receive)]
     (log/debug (str "receive signal : " signal))
     (if-not (= (:type signal) :stop)
-      (do 
-        (try 
-          (do (loop-handle actor f-handle signal))
+      (do
+        (try
+          (do (loop-handle actor f-handler signal a-state))
           (catch Exception e (log/error (str "handle singal error : " signal) e)))
         (recur (f-receive))))))
 
@@ -49,17 +49,23 @@
   "start a actor, loop receive and handle signal
    fn-handle  [signal] : function that handle signal
    return the function that sends signal : f-send"
-  [f-handle]
-  (let [queue (LinkedBlockingQueue.)]
-    (letfn [(f-send [msg] (do (log/debug (str "send signal : " msg))
-                              (.put queue msg)))
-            (f-receive [] (.take queue))]
-      
-      (.start (Thread. #(do (log/info (str "actor thread start"
-                                           (Thread/currentThread)))
-                            (loop-receive f-send f-receive f-handle)
-                            (log/info (str "actor thread stop"
-                                           (Thread/currentThread)))) ))
-      f-send)))
-
-
+  ([f-handler]
+     (mk-actor f-handler nil))
+  ([f-handler init-state]
+     (let [queue (LinkedBlockingQueue.)
+           a-state (atom init-state)]
+       (letfn [(f-send [msg] (do (log/debug (str "send signal : " msg))
+                                 (.put queue msg)))
+               (f-receive [] (.take queue))
+               (new-handler [actor signal] (if (= (:type signal) :update-state)
+                                             (do
+                                               (log/debug "update state to " (:new-state signal) )
+                                               (reset! a-state (:new-state signal))
+                                               nil)
+                                             (f-handler actor signal)) )]
+           (.start (Thread. #(do (log/info (str "actor thread start"
+                                               (Thread/currentThread)))
+                                (loop-receive f-send f-receive new-handler a-state)
+                                (log/info (str "actor thread stop"
+                                               (Thread/currentThread)))) ))
+          f-send))))

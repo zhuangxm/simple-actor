@@ -1,6 +1,8 @@
 (ns simple-actor.test.actor
   (:use [simple-actor.actor] :reload)
-  (:use [clojure.test]))
+  (:use [clojure.test])
+  (:require [simple-actor.signal :as s]
+            [clojure.tools.logging :as log]))
 
 
 (def signals_ (ref '()))
@@ -29,6 +31,17 @@
   (dosync (alter signals_ conj :none))
   [])
 
+(defmethod test-handle :update
+  [actor signal]
+  [(s/update-state-signal 3)])
+
+(def state (atom nil))
+
+(defmethod test-handle :check
+  [actor signal]
+  (reset! state (:state signal))
+  nil)
+
 (deftest test-actor
   "test actor handles signals should use the perdefined order"
   (let [actor (mk-actor test-handle)]
@@ -42,6 +55,13 @@
                                           :none
                                           :single
                                           :none)) )
-          "check the order the signalss that was handled") 
+          "check the order the signalss that was handled")
       (finally (stop-actor actor)))))
 
+(deftest test-update-state
+  "test handle update state"
+  (let [actor (mk-actor test-handle)]
+    (actor {:type :update})
+    (actor {:type :check})
+    (Thread/sleep 1000)
+    (is (= 3 @state))))
